@@ -1,0 +1,55 @@
+const BASE = '/api';
+
+async function request(caminho, opcoes = {}) {
+  const resp = await fetch(BASE + caminho, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opcoes,
+  });
+  const texto = await resp.text();
+  const dados = texto ? JSON.parse(texto) : null;
+  if (!resp.ok) {
+    throw new Error(dados?.erro || `Erro ${resp.status}`);
+  }
+  return dados;
+}
+
+export const api = {
+  // Casos de teste
+  listarCasos: () => request('/casos-teste'),
+  criarCaso: (body) => request('/casos-teste', { method: 'POST', body: JSON.stringify(body) }),
+
+  // Checklist
+  checklist: () => request('/checklist'),
+
+  // Auditorias
+  listarAuditorias: () => request('/auditorias'),
+  iniciarAuditoria: (body) =>
+    request('/auditorias', { method: 'POST', body: JSON.stringify(body) }),
+  obterAuditoria: (id) => request(`/auditorias/${id}`),
+  responderItem: (id, itemId, body) =>
+    request(`/auditorias/${id}/itens/${itemId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  finalizarAuditoria: (id) =>
+    request(`/auditorias/${id}/finalizar`, { method: 'POST' }),
+
+  // Nao conformidades
+  listarNc: (status) =>
+    request('/nao-conformidades' + (status ? `?status=${status}` : '')),
+  obterNc: (id) => request(`/nao-conformidades/${id}`),
+  criarNc: (body) =>
+    request('/nao-conformidades', { method: 'POST', body: JSON.stringify(body) }),
+  alterarStatusNc: (id, status) =>
+    request(`/nao-conformidades/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+  verificarPrazos: () =>
+    request('/nao-conformidades/verificar-prazos', { method: 'POST' }),
+  escalarNc: (id) =>
+    request(`/nao-conformidades/${id}/escalonar`, { method: 'POST' }),
+
+  // Dashboard
+  dashboard: () => request('/dashboard'),
+};

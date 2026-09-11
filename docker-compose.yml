@@ -1,0 +1,19 @@
+# Sobe apenas o MySQL da POC.
+# O backend/.env ja aponta para host 127.0.0.1 porta 3307.
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: testaudit-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: testaudit
+      MYSQL_DATABASE: testaudit
+    ports:
+      - "3307:3306"
+    volumes:
+      - testaudit_mysql:/var/lib/mysql
+      # schema + seed sao aplicados automaticamente na primeira criacao do volume
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./backend/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+
+volumes:
+  testaudit_mysql:
