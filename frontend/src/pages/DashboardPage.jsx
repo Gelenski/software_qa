@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { api } from '../api/client.js';
-import { AderenciaBadge, Erro } from '../components/ui.jsx';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { api } from "../api/client.js";
+import { AderenciaBadge, Erro } from "../components/ui.jsx";
 
 function Kpi({ rotulo, valor }) {
   return (
@@ -14,10 +14,13 @@ function Kpi({ rotulo, valor }) {
 
 export default function DashboardPage() {
   const [dados, setDados] = useState(null);
-  const [erro, setErro] = useState('');
+  const [erro, setErro] = useState("");
 
   useEffect(() => {
-    api.dashboard().then(setDados).catch((e) => setErro(e.message));
+    api
+      .dashboard()
+      .then(setDados)
+      .catch((e) => setErro(e.message));
   }, []);
 
   if (erro) return <Erro>{erro}</Erro>;
@@ -44,7 +47,7 @@ export default function DashboardPage() {
           rotulo="Aderencia media"
           valor={
             auditorias.aderenciaMedia == null
-              ? '--'
+              ? "--"
               : `${auditorias.aderenciaMedia.toFixed(2)}%`
           }
         />
@@ -57,9 +60,9 @@ export default function DashboardPage() {
             <tr>
               <th>#</th>
               <th>Caso de teste</th>
-              <th>Estrategia</th>
+              <th>Estratégia</th>
               <th>Status</th>
-              <th>Aderencia</th>
+              <th>Aderência</th>
               <th>NCs</th>
             </tr>
           </thead>
@@ -72,7 +75,9 @@ export default function DashboardPage() {
                 <td>{a.caso}</td>
                 <td>{a.estrategia}</td>
                 <td>
-                  <span className={`badge ${a.status === 'finalizada' ? 'verde' : 'azul'}`}>
+                  <span
+                    className={`badge ${a.status === "finalizada" ? "verde" : "azul"}`}
+                  >
                     {a.status}
                   </span>
                 </td>

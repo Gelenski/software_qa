@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { Erro } from '../components/ui.jsx';
 
@@ -18,12 +18,17 @@ export default function TestCasesPage() {
   const [erro, setErro] = useState('');
   const [aberto, setAberto] = useState(false);
   const [detalhe, setDetalhe] = useState(null);
+  const [templates, setTemplates] = useState([]);
+  const [templateId, setTemplateId] = useState('');
   const navigate = useNavigate();
 
   function carregar() {
     api.listarCasos().then(setCasos).catch((e) => setErro(e.message));
   }
   useEffect(carregar, []);
+  useEffect(() => {
+    api.listarChecklistTemplates().then(setTemplates).catch((e) => setErro(e.message));
+  }, []);
 
   const set = (campo) => (e) => setForm({ ...form, [campo]: e.target.value });
 
@@ -42,8 +47,16 @@ export default function TestCasesPage() {
 
   async function iniciarAuditoria(casoId) {
     setErro('');
+    if (!templateId) {
+      setErro('Selecione um checklist antes de iniciar a auditoria.');
+      return;
+    }
     try {
-      const r = await api.iniciarAuditoria({ casoTesteId: casoId, estrategia: 'padrao' });
+      const r = await api.iniciarAuditoria({
+        casoTesteId: casoId,
+        estrategia: 'padrao',
+        checklistTemplateId: Number(templateId),
+      });
       navigate(`/auditorias/${r.auditoria.id}`);
     } catch (err) {
       setErro(err.message);
@@ -60,6 +73,25 @@ export default function TestCasesPage() {
       </div>
 
       <Erro>{erro}</Erro>
+
+      {templates.length === 0 ? (
+        <p className="muted">
+          Nenhum checklist cadastrado. <Link to="/checklists">Crie um checklist</Link> antes
+          de iniciar uma auditoria.
+        </p>
+      ) : (
+        <div style={{ marginBottom: 12 }}>
+          <label>Checklist para a proxima auditoria</label>
+          <select value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+            <option value="">Selecione o checklist...</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.nome} ({t.qtd_itens} itens)
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {aberto && (
         <form className="card" onSubmit={salvar}>
@@ -118,7 +150,11 @@ export default function TestCasesPage() {
               <td>{c.titulo}</td>
               <td>{c.requisito || <span className="muted">-</span>}</td>
               <td style={{ textAlign: 'right' }}>
-                <button className="pequeno" onClick={() => iniciarAuditoria(c.id)}>
+                <button
+                  className="pequeno"
+                  disabled={templates.length === 0}
+                  onClick={() => iniciarAuditoria(c.id)}
+                >
                   Iniciar auditoria
                 </button>
               </td>

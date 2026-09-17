@@ -144,7 +144,7 @@ export default function NcDetailPage() {
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Notificacoes (simuladas)</h3>
+        <h3 style={{ marginTop: 0 }}>Notificacoes</h3>
         {nc.notificacoes.length === 0 && (
           <p className="muted">Nenhuma notificacao.</p>
         )}

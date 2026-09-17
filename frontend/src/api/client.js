@@ -18,8 +18,16 @@ export const api = {
   listarCasos: () => request('/casos-teste'),
   criarCaso: (body) => request('/casos-teste', { method: 'POST', body: JSON.stringify(body) }),
 
-  // Checklist
-  checklist: () => request('/checklist'),
+  // Checklist templates
+  listarChecklistTemplates: () => request('/checklist-templates'),
+  obterChecklistTemplate: (id) => request(`/checklist-templates/${id}`),
+  criarChecklistTemplate: (body) =>
+    request('/checklist-templates', { method: 'POST', body: JSON.stringify(body) }),
+  copiarChecklistTemplate: (id, body) =>
+    request(`/checklist-templates/${id}/copiar`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 
   // Auditorias
   listarAuditorias: () => request('/auditorias'),
@@ -49,6 +57,13 @@ export const api = {
     request('/nao-conformidades/verificar-prazos', { method: 'POST' }),
   escalarNc: (id) =>
     request(`/nao-conformidades/${id}/escalonar`, { method: 'POST' }),
+
+  // Responsaveis
+  listarResponsaveis: () => request('/responsaveis'),
+  criarResponsavel: (body) =>
+    request('/responsaveis', { method: 'POST', body: JSON.stringify(body) }),
+  atualizarResponsavel: (id, body) =>
+    request(`/responsaveis/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
 
   // Dashboard
   dashboard: () => request('/dashboard'),

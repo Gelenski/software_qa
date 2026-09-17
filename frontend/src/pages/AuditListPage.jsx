@@ -6,8 +6,10 @@ import { AderenciaBadge, Erro } from '../components/ui.jsx';
 export default function AuditListPage() {
   const [auditorias, setAuditorias] = useState([]);
   const [casos, setCasos] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [casoId, setCasoId] = useState('');
   const [estrategia, setEstrategia] = useState('padrao');
+  const [templateId, setTemplateId] = useState('');
   const [erro, setErro] = useState('');
   const navigate = useNavigate();
 
@@ -17,16 +19,19 @@ export default function AuditListPage() {
   useEffect(() => {
     carregar();
     api.listarCasos().then(setCasos).catch((e) => setErro(e.message));
+    api.listarChecklistTemplates().then(setTemplates).catch((e) => setErro(e.message));
   }, []);
 
   async function iniciar(e) {
     e.preventDefault();
     setErro('');
     if (!casoId) return setErro('Selecione um caso de teste.');
+    if (!templateId) return setErro('Selecione um checklist.');
     try {
       const r = await api.iniciarAuditoria({
         casoTesteId: Number(casoId),
         estrategia,
+        checklistTemplateId: Number(templateId),
       });
       navigate(`/auditorias/${r.auditoria.id}`);
     } catch (err) {
@@ -60,6 +65,17 @@ export default function AuditListPage() {
               <option value="estrita">Estrita (nao respondido = nao conforme)</option>
             </select>
           </div>
+          <div>
+            <label>Checklist</label>
+            <select value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+              <option value="">Selecione...</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nome} ({t.qtd_itens} itens)
+                </option>
+              ))}
+            </select>
+          </div>
           <div style={{ display: 'flex', alignItems: 'flex-end' }}>
             <button type="submit">Iniciar</button>
           </div>
@@ -71,6 +87,7 @@ export default function AuditListPage() {
           <tr>
             <th>#</th>
             <th>Caso</th>
+            <th>Checklist</th>
             <th>Estrategia</th>
             <th>Status</th>
             <th>Aderencia</th>
@@ -86,6 +103,7 @@ export default function AuditListPage() {
               <td>
                 {a.caso_codigo} - {a.caso_titulo}
               </td>
+              <td>{a.checklist_template_nome}</td>
               <td>{a.estrategia}</td>
               <td>
                 <span className={`badge ${a.status === 'finalizada' ? 'verde' : 'azul'}`}>
@@ -100,7 +118,7 @@ export default function AuditListPage() {
           ))}
           {auditorias.length === 0 && (
             <tr>
-              <td colSpan={6} className="muted">
+              <td colSpan={7} className="muted">
                 Nenhuma auditoria.
               </td>
             </tr>

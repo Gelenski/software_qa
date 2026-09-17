@@ -11,7 +11,7 @@ import {
 const OPCOES = ['conforme', 'nao_conforme', 'nao_aplica'];
 const HOJE = new Date().toISOString().slice(0, 10);
 
-function FormNc({ auditoriaId, item, aoCriar }) {
+function FormNc({ auditoriaId, item, responsaveis, aoCriar }) {
   const [form, setForm] = useState({
     descricao: '',
     severidade: 'media',
@@ -37,6 +37,19 @@ function FormNc({ auditoriaId, item, aoCriar }) {
     }
   }
 
+  if (responsaveis.length === 0) {
+    return (
+      <div
+        className="erro"
+        style={{ marginTop: 10 }}
+      >
+        Nenhum responsavel cadastrado. <Link to="/responsaveis">Cadastre um responsavel</Link>{' '}
+        antes de criar a NC (o e-mail dele sera avisado de atribuicao, prazo proximo e
+        vencimento).
+      </div>
+    );
+  }
+
   return (
     <form
       onSubmit={enviar}
@@ -58,7 +71,14 @@ function FormNc({ auditoriaId, item, aoCriar }) {
         </div>
         <div>
           <label>Responsavel</label>
-          <input value={form.responsavel} onChange={set('responsavel')} />
+          <select value={form.responsavel} onChange={set('responsavel')}>
+            <option value="">Selecione...</option>
+            {responsaveis.map((r) => (
+              <option key={r.id} value={r.nome}>
+                {r.nome}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label>Prazo</label>
@@ -80,11 +100,15 @@ export default function AuditRunPage() {
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState('');
   const [msg, setMsg] = useState('');
+  const [responsaveis, setResponsaveis] = useState([]);
 
   const carregar = useCallback(() => {
     api.obterAuditoria(id).then(setDados).catch((e) => setErro(e.message));
   }, [id]);
   useEffect(carregar, [carregar]);
+  useEffect(() => {
+    api.listarResponsaveis().then(setResponsaveis).catch(() => {});
+  }, []);
 
   async function responder(itemId, resposta) {
     setErro('');
@@ -129,7 +153,8 @@ export default function AuditRunPage() {
         <span className={`badge ${finalizada ? 'verde' : 'azul'}`}>{auditoria.status}</span>
       </div>
       <p className="muted">
-        {auditoria.caso_titulo} &middot; estrategia: {auditoria.estrategia}
+        {auditoria.caso_titulo} &middot; estrategia: {auditoria.estrategia}{' '}
+        &middot; checklist: {auditoria.checklist_template_nome}
       </p>
 
       <Erro>{erro}</Erro>
@@ -198,6 +223,7 @@ export default function AuditRunPage() {
                 <FormNc
                   auditoriaId={auditoria.id}
                   item={it}
+                  responsaveis={responsaveis}
                   aoCriar={() => {
                     setMsg('NC criada.');
                     carregar();
