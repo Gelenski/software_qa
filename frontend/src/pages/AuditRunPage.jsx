@@ -6,6 +6,7 @@ import {
   SeveridadeBadge,
   LABEL_RESPOSTA,
   Erro,
+  useEnvio,
 } from '../components/ui.jsx';
 
 const OPCOES = ['conforme', 'nao_conforme', 'nao_aplica'];
@@ -19,22 +20,25 @@ function FormNc({ auditoriaId, item, responsaveis, aoCriar }) {
     prazo: HOJE,
   });
   const [erro, setErro] = useState('');
+  const [enviando, enviar] = useEnvio();
   const set = (c) => (e) => setForm({ ...form, [c]: e.target.value });
 
-  async function enviar(e) {
+  function submeter(e) {
     e.preventDefault();
-    setErro('');
-    try {
-      await api.criarNc({
-        auditoriaId,
-        checklistItemId: item.checklist_item_id,
-        ...form,
-      });
-      setForm({ descricao: '', severidade: 'media', responsavel: '', prazo: HOJE });
-      aoCriar();
-    } catch (err) {
-      setErro(err.message);
-    }
+    return enviar(async () => {
+      setErro('');
+      try {
+        await api.criarNc({
+          auditoriaId,
+          checklistItemId: item.checklist_item_id,
+          ...form,
+        });
+        setForm({ descricao: '', severidade: 'media', responsavel: '', prazo: HOJE });
+        await aoCriar();
+      } catch (err) {
+        setErro(err.message);
+      }
+    });
   }
 
   if (responsaveis.length === 0) {
@@ -52,7 +56,8 @@ function FormNc({ auditoriaId, item, responsaveis, aoCriar }) {
 
   return (
     <form
-      onSubmit={enviar}
+      onSubmit={submeter}
+      className={enviando ? 'enviando' : ''}
       style={{ marginTop: 10, background: '#fbf6f5', padding: 12, borderRadius: 6 }}
     >
       <strong>Nova nao conformidade</strong>
@@ -87,8 +92,8 @@ function FormNc({ auditoriaId, item, responsaveis, aoCriar }) {
         </div>
       </div>
       <div style={{ marginTop: 10 }}>
-        <button type="submit" className="pequeno">
-          Criar NC
+        <button type="submit" className="pequeno" disabled={enviando}>
+          {enviando ? 'Criando NC...' : 'Criar NC'}
         </button>
       </div>
     </form>
@@ -101,35 +106,42 @@ export default function AuditRunPage() {
   const [erro, setErro] = useState('');
   const [msg, setMsg] = useState('');
   const [responsaveis, setResponsaveis] = useState([]);
+  const [enviando, enviar] = useEnvio();
 
   const carregar = useCallback(() => {
-    api.obterAuditoria(id).then(setDados).catch((e) => setErro(e.message));
+    return api.obterAuditoria(id).then(setDados).catch((e) => setErro(e.message));
   }, [id]);
-  useEffect(carregar, [carregar]);
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
   useEffect(() => {
     api.listarResponsaveis().then(setResponsaveis).catch(() => {});
   }, []);
 
-  async function responder(itemId, resposta) {
-    setErro('');
-    try {
-      const r = await api.responderItem(id, itemId, { resposta });
-      setDados(r);
-    } catch (err) {
-      setErro(err.message);
-    }
+  function responder(itemId, resposta) {
+    return enviar(async () => {
+      setErro('');
+      try {
+        const r = await api.responderItem(id, itemId, { resposta });
+        setDados(r);
+      } catch (err) {
+        setErro(err.message);
+      }
+    });
   }
 
-  async function finalizar() {
-    setErro('');
-    setMsg('');
-    try {
-      const r = await api.finalizarAuditoria(id);
-      setDados(r);
-      setMsg('Auditoria finalizada.');
-    } catch (err) {
-      setErro(err.message);
-    }
+  function finalizar() {
+    return enviar(async () => {
+      setErro('');
+      setMsg('');
+      try {
+        const r = await api.finalizarAuditoria(id);
+        setDados(r);
+        setMsg('Auditoria finalizada.');
+      } catch (err) {
+        setErro(err.message);
+      }
+    });
   }
 
   if (erro && !dados) return <Erro>{erro}</Erro>;
@@ -182,10 +194,10 @@ export default function AuditRunPage() {
             {!finalizada && (
               <button
                 style={{ marginTop: 8 }}
-                disabled={!auditoria.podeFinalizar}
+                disabled={!auditoria.podeFinalizar || enviando}
                 onClick={finalizar}
               >
-                Finalizar auditoria
+                {enviando ? 'Enviando...' : 'Finalizar auditoria'}
               </button>
             )}
           </div>
@@ -211,7 +223,7 @@ export default function AuditRunPage() {
                       type="radio"
                       name={`item-${it.checklist_item_id}`}
                       checked={it.resposta === op}
-                      disabled={finalizada}
+                      disabled={finalizada || enviando}
                       onChange={() => responder(it.checklist_item_id, op)}
                     />
                     {LABEL_RESPOSTA[op]}
@@ -226,7 +238,7 @@ export default function AuditRunPage() {
                   responsaveis={responsaveis}
                   aoCriar={() => {
                     setMsg('NC criada.');
-                    carregar();
+                    return carregar();
                   }}
                 />
               )}

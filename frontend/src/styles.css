@@ -132,3 +132,8 @@ label { display: block; font-weight: 600; margin: 10px 0 4px; font-size: 13px; }
 .notif .assunto { font-weight: 700; }
 
 .topo-acoes { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+
+/* Bloqueio visual enquanto um envio esta em andamento (o bloqueio real e o
+   useEnvio + disabled no botao; aqui nao se usa pointer-events para nao matar
+   o "Cancelar" se a requisicao demorar). */
+.enviando { opacity: .6; }

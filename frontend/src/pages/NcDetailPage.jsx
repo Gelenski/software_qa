@@ -6,6 +6,7 @@ import {
   SeveridadeBadge,
   LABEL_STATUS_NC,
   Erro,
+  useEnvio,
 } from '../components/ui.jsx';
 
 export default function NcDetailPage() {
@@ -13,34 +14,41 @@ export default function NcDetailPage() {
   const [nc, setNc] = useState(null);
   const [erro, setErro] = useState('');
   const [msg, setMsg] = useState('');
+  const [enviando, enviar] = useEnvio();
 
   const carregar = useCallback(() => {
-    api.obterNc(id).then(setNc).catch((e) => setErro(e.message));
+    return api.obterNc(id).then(setNc).catch((e) => setErro(e.message));
   }, [id]);
-  useEffect(carregar, [carregar]);
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
 
-  async function mudarStatus(status) {
-    setErro('');
-    setMsg('');
-    try {
-      await api.alterarStatusNc(id, status);
-      setMsg(`Status alterado para "${LABEL_STATUS_NC[status]}".`);
-      carregar();
-    } catch (err) {
-      setErro(err.message);
-    }
+  function mudarStatus(status) {
+    return enviar(async () => {
+      setErro('');
+      setMsg('');
+      try {
+        await api.alterarStatusNc(id, status);
+        setMsg(`Status alterado para "${LABEL_STATUS_NC[status]}".`);
+        await carregar();
+      } catch (err) {
+        setErro(err.message);
+      }
+    });
   }
 
-  async function escalar() {
-    setErro('');
-    setMsg('');
-    try {
-      await api.escalarNc(id);
-      setMsg('NC escalonada.');
-      carregar();
-    } catch (err) {
-      setErro(err.message);
-    }
+  function escalar() {
+    return enviar(async () => {
+      setErro('');
+      setMsg('');
+      try {
+        await api.escalarNc(id);
+        setMsg('NC escalonada.');
+        await carregar();
+      } catch (err) {
+        setErro(err.message);
+      }
+    });
   }
 
   if (erro && !nc) return <Erro>{erro}</Erro>;
@@ -107,7 +115,12 @@ export default function NcDetailPage() {
             <span className="muted">Nenhuma (estado final).</span>
           )}
           {nc.transicoesPermitidas.map((s) => (
-            <button key={s} className="pequeno" onClick={() => mudarStatus(s)}>
+            <button
+              key={s}
+              className="pequeno"
+              disabled={enviando}
+              onClick={() => mudarStatus(s)}
+            >
               {LABEL_STATUS_NC[s]}
             </button>
           ))}
@@ -115,8 +128,8 @@ export default function NcDetailPage() {
 
         {nc.status !== 'atrasada' && nc.status !== 'resolvida' && (
           <div style={{ marginTop: 14 }}>
-            <button className="perigo pequeno" onClick={escalar} disabled={!vencida}>
-              Escalonar NC
+            <button className="perigo pequeno" onClick={escalar} disabled={!vencida || enviando}>
+              {enviando ? 'Enviando...' : 'Escalonar NC'}
             </button>{' '}
             <span className="muted">
               {vencida

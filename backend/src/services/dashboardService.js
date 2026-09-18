@@ -45,9 +45,6 @@ export const dashboardService = {
         abertas,
         atrasadas: porStatus.atrasada || 0,
         resolvidas: porStatus.resolvida || 0,
-        aguardandoValidacao: porStatus.aguardando_validacao || 0,
-        emCorrecao: porStatus.em_correcao || 0,
-        porStatus,
       },
     };
   },

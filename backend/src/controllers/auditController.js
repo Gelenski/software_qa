@@ -1,21 +1,20 @@
 import { auditService } from '../services/auditService.js';
-import { checklistRepository } from '../repositories/checklistRepository.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
 
 export const auditController = {
-  checklist: asyncHandler(async (req, res) => {
-    res.json(await checklistRepository.listarAtivos());
-  }),
-
   listar: asyncHandler(async (req, res) => {
     res.json(await auditService.listar());
   }),
 
   iniciar: asyncHandler(async (req, res) => {
-    const { casoTesteId, estrategia } = req.body;
-    res
-      .status(201)
-      .json(await auditService.iniciar({ casoTesteId: Number(casoTesteId), estrategia }));
+    const { casoTesteId, estrategia, checklistTemplateId } = req.body;
+    res.status(201).json(
+      await auditService.iniciar({
+        casoTesteId: Number(casoTesteId),
+        estrategia,
+        checklistTemplateId: Number(checklistTemplateId),
+      }),
+    );
   }),
 
   obter: asyncHandler(async (req, res) => {

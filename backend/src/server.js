@@ -1,5 +1,6 @@
 import { app } from './app.js';
 import { assertConnection } from './config/db.js';
+import { iniciarVerificacaoPeriodica } from './jobs/prazoScheduler.js';
 
 const PORT = Number(process.env.PORT || 3001);
 
@@ -12,6 +13,8 @@ async function bootstrap() {
     console.error('     verifique o backend/.env e se o banco esta no ar.');
     process.exit(1);
   }
+
+  iniciarVerificacaoPeriodica();
 
   app.listen(PORT, () => {
     console.log(`[api] TestAudit ouvindo em http://localhost:${PORT}`);

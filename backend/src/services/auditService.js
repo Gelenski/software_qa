@@ -12,21 +12,29 @@ const RESPOSTAS_VALIDAS = ['conforme', 'nao_conforme', 'nao_aplica'];
 
 export const auditService = {
   /** Inicia uma auditoria para um caso de teste, criando as respostas em branco. */
-  async iniciar({ casoTesteId, estrategia = 'padrao' }) {
+  async iniciar({ casoTesteId, estrategia = 'padrao', checklistTemplateId }) {
     if (!casoTesteId) throw new AppError('Informe o caso de teste.');
     if (!ESTRATEGIAS_DISPONIVEIS.includes(estrategia)) {
       throw new AppError(
         `Estrategia invalida. Use uma de: ${ESTRATEGIAS_DISPONIVEIS.join(', ')}.`,
       );
     }
+    if (!checklistTemplateId) throw new AppError('Selecione um checklist.');
 
     const caso = await testCaseRepository.buscarPorId(casoTesteId);
     if (!caso) throw new NotFoundError('Caso de teste');
 
-    const itens = await checklistRepository.listarAtivos();
+    const template = await checklistRepository.buscarTemplatePorId(checklistTemplateId);
+    if (!template) throw new NotFoundError('Checklist template');
+
+    const itens = await checklistRepository.listarAtivosPorTemplate(checklistTemplateId);
     if (itens.length === 0) throw new AppError('Checklist nao configurado.');
 
-    const auditoriaId = await auditRepository.criar({ casoTesteId, estrategia });
+    const auditoriaId = await auditRepository.criar({
+      casoTesteId,
+      estrategia,
+      checklistTemplateId,
+    });
     await auditRepository.criarItens(auditoriaId, itens.map((i) => i.id));
 
     return this.obter(auditoriaId);

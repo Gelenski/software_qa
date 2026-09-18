@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
-import { Erro } from '../components/ui.jsx';
+import { Erro, useEnvio } from '../components/ui.jsx';
 
 const VAZIO = { nome: '', email: '' };
 
@@ -10,11 +10,14 @@ export default function ResponsaveisPage() {
   const [editandoId, setEditandoId] = useState(null);
   const [erro, setErro] = useState('');
   const [aberto, setAberto] = useState(false);
+  const [enviando, enviar] = useEnvio();
 
   function carregar() {
-    api.listarResponsaveis().then(setResponsaveis).catch((e) => setErro(e.message));
+    return api.listarResponsaveis().then(setResponsaveis).catch((e) => setErro(e.message));
   }
-  useEffect(carregar, []);
+  useEffect(() => {
+    carregar();
+  }, []);
 
   const set = (campo) => (e) => setForm({ ...form, [campo]: e.target.value });
 
@@ -30,22 +33,24 @@ export default function ResponsaveisPage() {
     setAberto((v) => !v);
   }
 
-  async function salvar(e) {
+  function salvar(e) {
     e.preventDefault();
-    setErro('');
-    try {
-      if (editandoId) {
-        await api.atualizarResponsavel(editandoId, { email: form.email });
-      } else {
-        await api.criarResponsavel(form);
+    return enviar(async () => {
+      setErro('');
+      try {
+        if (editandoId) {
+          await api.atualizarResponsavel(editandoId, { email: form.email });
+        } else {
+          await api.criarResponsavel(form);
+        }
+        setForm(VAZIO);
+        setEditandoId(null);
+        setAberto(false);
+        await carregar();
+      } catch (err) {
+        setErro(err.message);
       }
-      setForm(VAZIO);
-      setEditandoId(null);
-      setAberto(false);
-      carregar();
-    } catch (err) {
-      setErro(err.message);
-    }
+    });
   }
 
   return (
@@ -58,7 +63,7 @@ export default function ResponsaveisPage() {
       <Erro>{erro}</Erro>
 
       {aberto && (
-        <form className="card" onSubmit={salvar}>
+        <form className={`card ${enviando ? 'enviando' : ''}`} onSubmit={salvar}>
           <label>Nome *</label>
           <input
             value={form.nome}
@@ -80,7 +85,9 @@ export default function ResponsaveisPage() {
             placeholder="ana.souza@empresa.com"
           />
           <div style={{ marginTop: 12 }}>
-            <button type="submit">Salvar</button>
+            <button type="submit" disabled={enviando}>
+              {enviando ? 'Salvando...' : 'Salvar'}
+            </button>
           </div>
         </form>
       )}

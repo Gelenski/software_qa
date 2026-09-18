@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
-import { AderenciaBadge, Erro } from '../components/ui.jsx';
+import { AderenciaBadge, Erro, useEnvio } from '../components/ui.jsx';
 
 export default function AuditListPage() {
   const [auditorias, setAuditorias] = useState([]);
@@ -11,6 +11,7 @@ export default function AuditListPage() {
   const [estrategia, setEstrategia] = useState('padrao');
   const [templateId, setTemplateId] = useState('');
   const [erro, setErro] = useState('');
+  const [enviando, enviar] = useEnvio();
   const navigate = useNavigate();
 
   function carregar() {
@@ -22,21 +23,23 @@ export default function AuditListPage() {
     api.listarChecklistTemplates().then(setTemplates).catch((e) => setErro(e.message));
   }, []);
 
-  async function iniciar(e) {
+  function iniciar(e) {
     e.preventDefault();
     setErro('');
     if (!casoId) return setErro('Selecione um caso de teste.');
     if (!templateId) return setErro('Selecione um checklist.');
-    try {
-      const r = await api.iniciarAuditoria({
-        casoTesteId: Number(casoId),
-        estrategia,
-        checklistTemplateId: Number(templateId),
-      });
-      navigate(`/auditorias/${r.auditoria.id}`);
-    } catch (err) {
-      setErro(err.message);
-    }
+    return enviar(async () => {
+      try {
+        const r = await api.iniciarAuditoria({
+          casoTesteId: Number(casoId),
+          estrategia,
+          checklistTemplateId: Number(templateId),
+        });
+        navigate(`/auditorias/${r.auditoria.id}`);
+      } catch (err) {
+        setErro(err.message);
+      }
+    });
   }
 
   return (
@@ -44,7 +47,7 @@ export default function AuditListPage() {
       <h2>Auditorias</h2>
       <Erro>{erro}</Erro>
 
-      <form className="card" onSubmit={iniciar}>
+      <form className={`card ${enviando ? 'enviando' : ''}`} onSubmit={iniciar}>
         <h3 style={{ marginTop: 0 }}>Iniciar auditoria</h3>
         <div className="linha">
           <div>
@@ -77,7 +80,9 @@ export default function AuditListPage() {
             </select>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-            <button type="submit">Iniciar</button>
+            <button type="submit" disabled={enviando}>
+              {enviando ? 'Iniciando...' : 'Iniciar'}
+            </button>
           </div>
         </div>
       </form>

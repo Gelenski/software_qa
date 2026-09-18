@@ -1,11 +1,11 @@
 import { pool } from '../config/db.js';
 
 export const auditRepository = {
-  async criar({ casoTesteId, estrategia }) {
+  async criar({ casoTesteId, estrategia, checklistTemplateId }) {
     const [res] = await pool.query(
-      `INSERT INTO auditorias (caso_teste_id, estrategia)
-       VALUES (:casoTesteId, :estrategia)`,
-      { casoTesteId, estrategia },
+      `INSERT INTO auditorias (caso_teste_id, checklist_template_id, estrategia)
+       VALUES (:casoTesteId, :checklistTemplateId, :estrategia)`,
+      { casoTesteId, checklistTemplateId, estrategia },
     );
     return res.insertId;
   },
@@ -22,11 +22,13 @@ export const auditRepository = {
 
   async buscarPorId(id) {
     const [rows] = await pool.query(
-      `SELECT a.id, a.caso_teste_id, a.estrategia, a.status, a.aderencia,
-              a.criado_em, a.finalizado_em,
-              c.codigo AS caso_codigo, c.titulo AS caso_titulo
+      `SELECT a.id, a.caso_teste_id, a.checklist_template_id, a.estrategia, a.status,
+              a.aderencia, a.criado_em, a.finalizado_em,
+              c.codigo AS caso_codigo, c.titulo AS caso_titulo,
+              t.nome AS checklist_template_nome
          FROM auditorias a
          JOIN casos_teste c ON c.id = a.caso_teste_id
+         JOIN checklist_templates t ON t.id = a.checklist_template_id
         WHERE a.id = :id`,
       { id },
     );
@@ -37,9 +39,11 @@ export const auditRepository = {
     const [rows] = await pool.query(
       `SELECT a.id, a.estrategia, a.status, a.aderencia, a.criado_em, a.finalizado_em,
               c.codigo AS caso_codigo, c.titulo AS caso_titulo,
+              t.nome AS checklist_template_nome,
               (SELECT COUNT(*) FROM nao_conformidades n WHERE n.auditoria_id = a.id) AS qtd_nc
          FROM auditorias a
          JOIN casos_teste c ON c.id = a.caso_teste_id
+         JOIN checklist_templates t ON t.id = a.checklist_template_id
         ORDER BY a.criado_em DESC, a.id DESC`,
     );
     return rows;

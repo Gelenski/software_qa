@@ -2,10 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import { router } from './routes/index.js';
 import { errorHandler } from './middlewares/errorHandler.js';
-import { registrarAssinantesDeNotificacao } from './services/notificationService.js';
+import { registrarAssinantesDeEmail } from './services/emailNotificationService.js';
 
-// Observer: registra o assinante de notificacoes no barramento de eventos.
-registrarAssinantesDeNotificacao();
+// Observer: registra o assinante de notificacao no barramento de eventos.
+registrarAssinantesDeEmail();
 
 export const app = express();
 

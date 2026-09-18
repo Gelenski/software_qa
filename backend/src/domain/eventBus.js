@@ -9,6 +9,8 @@
 
 export const EVENTOS = Object.freeze({
   NC_ESCALADA: 'nc.escalada',
+  NC_ATRIBUIDA: 'nc.atribuida',
+  NC_PROXIMA_DO_VENCIMENTO: 'nc.proxima_do_vencimento',
 });
 
 class EventBus {

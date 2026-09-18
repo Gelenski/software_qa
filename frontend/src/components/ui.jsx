@@ -1,3 +1,28 @@
+import { useRef, useState } from 'react';
+
+/**
+ * Bloqueia a acao enquanto a chamada de API esta em andamento (evita duplo
+ * envio). O ref trava no mesmo tick; o state so serve para a UI reagir.
+ */
+export function useEnvio() {
+  const [enviando, setEnviando] = useState(false);
+  const travado = useRef(false);
+
+  async function enviar(acao) {
+    if (travado.current) return;
+    travado.current = true;
+    setEnviando(true);
+    try {
+      return await acao();
+    } finally {
+      travado.current = false;
+      setEnviando(false);
+    }
+  }
+
+  return [enviando, enviar];
+}
+
 export const LABEL_STATUS_NC = {
   aberta: 'Aberta',
   em_correcao: 'Em correcao',

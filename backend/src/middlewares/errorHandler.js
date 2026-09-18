@@ -1,3 +1,4 @@
+import multer from 'multer';
 import { AppError } from '../domain/errors.js';
 
 /** Converte erros em respostas JSON consistentes. */
@@ -5,6 +6,9 @@ import { AppError } from '../domain/errors.js';
 export function errorHandler(err, req, res, next) {
   if (err instanceof AppError) {
     return res.status(err.status).json({ erro: err.message });
+  }
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ erro: `Falha no upload: ${err.message}` });
   }
   if (err?.code === 'ER_DUP_ENTRY') {
     return res.status(409).json({ erro: 'Registro duplicado.' });

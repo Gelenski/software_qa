@@ -6,6 +6,7 @@ import {
   SeveridadeBadge,
   LABEL_STATUS_NC,
   Erro,
+  useEnvio,
 } from '../components/ui.jsx';
 
 export default function NcListPage() {
@@ -13,29 +14,36 @@ export default function NcListPage() {
   const [filtro, setFiltro] = useState('');
   const [erro, setErro] = useState('');
   const [resultado, setResultado] = useState(null);
+  const [enviando, enviar] = useEnvio();
 
   function carregar() {
-    api.listarNc(filtro).then(setNcs).catch((e) => setErro(e.message));
+    return api.listarNc({ status: filtro }).then(setNcs).catch((e) => setErro(e.message));
   }
-  useEffect(carregar, [filtro]);
+  useEffect(() => {
+    carregar();
+  }, [filtro]);
 
-  async function verificarPrazos() {
-    setErro('');
-    setResultado(null);
-    try {
-      const r = await api.verificarPrazos();
-      setResultado(r);
-      carregar();
-    } catch (err) {
-      setErro(err.message);
-    }
+  function verificarPrazos() {
+    return enviar(async () => {
+      setErro('');
+      setResultado(null);
+      try {
+        const r = await api.verificarPrazos();
+        setResultado(r);
+        await carregar();
+      } catch (err) {
+        setErro(err.message);
+      }
+    });
   }
 
   return (
     <>
       <div className="topo-acoes">
         <h2>Nao conformidades</h2>
-        <button onClick={verificarPrazos}>Verificar prazos</button>
+        <button onClick={verificarPrazos} disabled={enviando}>
+          {enviando ? 'Verificando...' : 'Verificar prazos'}
+        </button>
       </div>
 
       <Erro>{erro}</Erro>

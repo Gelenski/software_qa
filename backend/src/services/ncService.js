@@ -2,6 +2,7 @@ import { ncRepository } from '../repositories/ncRepository.js';
 import { auditRepository } from '../repositories/auditRepository.js';
 import { escalationRepository } from '../repositories/escalationRepository.js';
 import { notificationRepository } from '../repositories/notificationRepository.js';
+import { eventBus, EVENTOS } from '../domain/eventBus.js';
 import { AppError, NotFoundError } from '../domain/errors.js';
 import {
   validarTransicaoManual,
@@ -47,7 +48,7 @@ export const ncService = {
       }
     }
 
-    return ncRepository.criar({
+    const nc = await ncRepository.criar({
       auditoriaId,
       checklistItemId,
       descricao,
@@ -55,6 +56,11 @@ export const ncService = {
       responsavel,
       prazo,
     });
+
+    // Observer: publica a atribuicao para quem quiser reagir (e-mail real).
+    await eventBus.publish(EVENTOS.NC_ATRIBUIDA, { nc });
+
+    return nc;
   },
 
   listar(filtro) {

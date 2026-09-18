@@ -4,7 +4,7 @@ import { asyncHandler } from '../middlewares/errorHandler.js';
 
 export const ncController = {
   listar: asyncHandler(async (req, res) => {
-    res.json(await ncService.listar({ status: req.query.status }));
+    res.json(await ncService.listar({ status: req.query.status, responsavel: req.query.responsavel }));
   }),
 
   obter: asyncHandler(async (req, res) => {

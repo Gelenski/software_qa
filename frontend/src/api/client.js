@@ -1,9 +1,10 @@
 const BASE = '/api';
 
 async function request(caminho, opcoes = {}) {
+  const ehFormData = opcoes.body instanceof FormData;
   const resp = await fetch(BASE + caminho, {
-    headers: { 'Content-Type': 'application/json' },
     ...opcoes,
+    headers: ehFormData ? opcoes.headers : { 'Content-Type': 'application/json', ...opcoes.headers },
   });
   const texto = await resp.text();
   const dados = texto ? JSON.parse(texto) : null;
@@ -17,6 +18,11 @@ export const api = {
   // Casos de teste
   listarCasos: () => request('/casos-teste'),
   criarCaso: (body) => request('/casos-teste', { method: 'POST', body: JSON.stringify(body) }),
+  importarCasos: (arquivo) => {
+    const dados = new FormData();
+    dados.append('arquivo', arquivo);
+    return request('/casos-teste/importar', { method: 'POST', body: dados });
+  },
 
   // Checklist templates
   listarChecklistTemplates: () => request('/checklist-templates'),
@@ -43,8 +49,13 @@ export const api = {
     request(`/auditorias/${id}/finalizar`, { method: 'POST' }),
 
   // Nao conformidades
-  listarNc: (status) =>
-    request('/nao-conformidades' + (status ? `?status=${status}` : '')),
+  listarNc: ({ status, responsavel } = {}) => {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (responsavel) params.set('responsavel', responsavel);
+    const qs = params.toString();
+    return request('/nao-conformidades' + (qs ? `?${qs}` : ''));
+  },
   obterNc: (id) => request(`/nao-conformidades/${id}`),
   criarNc: (body) =>
     request('/nao-conformidades', { method: 'POST', body: JSON.stringify(body) }),

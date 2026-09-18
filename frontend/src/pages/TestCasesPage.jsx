@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
-import { Erro } from '../components/ui.jsx';
+import { Erro, useEnvio } from '../components/ui.jsx';
 
 const VAZIO = {
   codigo: '',
@@ -20,59 +20,125 @@ export default function TestCasesPage() {
   const [detalhe, setDetalhe] = useState(null);
   const [templates, setTemplates] = useState([]);
   const [templateId, setTemplateId] = useState('');
+  const [importando, setImportando] = useState(false);
+  const [resultadoImport, setResultadoImport] = useState(null);
+  const inputArquivoRef = useRef(null);
   const navigate = useNavigate();
+  const [salvando, enviarSalvar] = useEnvio();
+  const [iniciando, enviarInicio] = useEnvio();
 
   function carregar() {
-    api.listarCasos().then(setCasos).catch((e) => setErro(e.message));
+    return api.listarCasos().then(setCasos).catch((e) => setErro(e.message));
   }
-  useEffect(carregar, []);
+  useEffect(() => {
+    carregar();
+  }, []);
   useEffect(() => {
     api.listarChecklistTemplates().then(setTemplates).catch((e) => setErro(e.message));
   }, []);
 
   const set = (campo) => (e) => setForm({ ...form, [campo]: e.target.value });
 
-  async function salvar(e) {
+  function salvar(e) {
     e.preventDefault();
+    return enviarSalvar(async () => {
+      setErro('');
+      try {
+        await api.criarCaso(form);
+        setForm(VAZIO);
+        setAberto(false);
+        await carregar();
+      } catch (err) {
+        setErro(err.message);
+      }
+    });
+  }
+
+  async function importarArquivo(e) {
+    const arquivo = e.target.files[0];
+    e.target.value = '';
+    if (!arquivo) return;
     setErro('');
+    setResultadoImport(null);
+    setImportando(true);
     try {
-      await api.criarCaso(form);
-      setForm(VAZIO);
-      setAberto(false);
+      const resultado = await api.importarCasos(arquivo);
+      setResultadoImport(resultado);
       carregar();
     } catch (err) {
       setErro(err.message);
+    } finally {
+      setImportando(false);
     }
   }
 
-  async function iniciarAuditoria(casoId) {
+  function iniciarAuditoria(casoId) {
     setErro('');
     if (!templateId) {
       setErro('Selecione um checklist antes de iniciar a auditoria.');
       return;
     }
-    try {
-      const r = await api.iniciarAuditoria({
-        casoTesteId: casoId,
-        estrategia: 'padrao',
-        checklistTemplateId: Number(templateId),
-      });
-      navigate(`/auditorias/${r.auditoria.id}`);
-    } catch (err) {
-      setErro(err.message);
-    }
+    return enviarInicio(async () => {
+      try {
+        const r = await api.iniciarAuditoria({
+          casoTesteId: casoId,
+          estrategia: 'padrao',
+          checklistTemplateId: Number(templateId),
+        });
+        navigate(`/auditorias/${r.auditoria.id}`);
+      } catch (err) {
+        setErro(err.message);
+      }
+    });
   }
 
   return (
     <>
       <div className="topo-acoes">
         <h2>Casos de teste</h2>
-        <button onClick={() => setAberto((v) => !v)}>
-          {aberto ? 'Cancelar' : 'Novo caso de teste'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="file"
+            accept=".xlsx"
+            ref={inputArquivoRef}
+            style={{ display: 'none' }}
+            onChange={importarArquivo}
+          />
+          <button
+            className="secundario"
+            disabled={importando}
+            onClick={() => inputArquivoRef.current.click()}
+          >
+            {importando ? 'Importando...' : 'Importar planilha'}
+          </button>
+          <button onClick={() => setAberto((v) => !v)}>
+            {aberto ? 'Cancelar' : 'Novo caso de teste'}
+          </button>
+        </div>
       </div>
 
       <Erro>{erro}</Erro>
+
+      {resultadoImport && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <p>
+            <strong>{resultadoImport.importados}</strong> caso(s) de teste importado(s) com sucesso.
+          </p>
+          {resultadoImport.falhas.length > 0 && (
+            <>
+              <p className="muted">{resultadoImport.falhas.length} linha(s) com erro:</p>
+              <ul>
+                {resultadoImport.falhas.map((f) => (
+                  <li key={f.linha}>
+                    Linha {f.linha}
+                    {f.codigo ? ` (${f.codigo})` : ''}: {f.erro}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
 
       {templates.length === 0 ? (
         <p className="muted">
@@ -94,7 +160,7 @@ export default function TestCasesPage() {
       )}
 
       {aberto && (
-        <form className="card" onSubmit={salvar}>
+        <form className={`card ${salvando ? 'enviando' : ''}`} onSubmit={salvar}>
           <div className="linha">
             <div>
               <label>Codigo *</label>
@@ -122,7 +188,9 @@ export default function TestCasesPage() {
             onChange={set('resultadoEsperado')}
           />
           <div style={{ marginTop: 12 }}>
-            <button type="submit">Salvar</button>
+            <button type="submit" disabled={salvando}>
+              {salvando ? 'Salvando...' : 'Salvar'}
+            </button>
           </div>
         </form>
       )}
@@ -152,10 +220,10 @@ export default function TestCasesPage() {
               <td style={{ textAlign: 'right' }}>
                 <button
                   className="pequeno"
-                  disabled={templates.length === 0}
+                  disabled={templates.length === 0 || iniciando}
                   onClick={() => iniciarAuditoria(c.id)}
                 >
-                  Iniciar auditoria
+                  {iniciando ? 'Iniciando...' : 'Iniciar auditoria'}
                 </button>
               </td>
             </tr>

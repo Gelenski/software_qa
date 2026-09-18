@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
-import { Erro } from '../components/ui.jsx';
+import { Erro, useEnvio } from '../components/ui.jsx';
 
 const VAZIO = { nome: '', perguntas: [''] };
 
@@ -12,11 +12,15 @@ export default function ChecklistsPage() {
   const [detalhe, setDetalhe] = useState(null);
   const [copiandoId, setCopiandoId] = useState(null);
   const [nomeCopia, setNomeCopia] = useState('');
+  const [salvando, enviarSalvar] = useEnvio();
+  const [copiando, enviarCopia] = useEnvio();
 
   function carregar() {
-    api.listarChecklistTemplates().then(setTemplates).catch((e) => setErro(e.message));
+    return api.listarChecklistTemplates().then(setTemplates).catch((e) => setErro(e.message));
   }
-  useEffect(carregar, []);
+  useEffect(() => {
+    carregar();
+  }, []);
 
   function alterarPergunta(i, valor) {
     const perguntas = [...form.perguntas];
@@ -33,17 +37,19 @@ export default function ChecklistsPage() {
     setForm({ ...form, perguntas: form.perguntas.filter((_, idx) => idx !== i) });
   }
 
-  async function salvar(e) {
+  function salvar(e) {
     e.preventDefault();
-    setErro('');
-    try {
-      await api.criarChecklistTemplate(form);
-      setForm(VAZIO);
-      setAberto(false);
-      carregar();
-    } catch (err) {
-      setErro(err.message);
-    }
+    return enviarSalvar(async () => {
+      setErro('');
+      try {
+        await api.criarChecklistTemplate(form);
+        setForm(VAZIO);
+        setAberto(false);
+        await carregar();
+      } catch (err) {
+        setErro(err.message);
+      }
+    });
   }
 
   function verItens(t) {
@@ -59,17 +65,19 @@ export default function ChecklistsPage() {
     setNomeCopia(`${t.nome} (copia)`);
   }
 
-  async function confirmarCopia(e) {
+  function confirmarCopia(e) {
     e.preventDefault();
-    setErro('');
-    try {
-      await api.copiarChecklistTemplate(copiandoId, { nome: nomeCopia });
-      setCopiandoId(null);
-      setNomeCopia('');
-      carregar();
-    } catch (err) {
-      setErro(err.message);
-    }
+    return enviarCopia(async () => {
+      setErro('');
+      try {
+        await api.copiarChecklistTemplate(copiandoId, { nome: nomeCopia });
+        setCopiandoId(null);
+        setNomeCopia('');
+        await carregar();
+      } catch (err) {
+        setErro(err.message);
+      }
+    });
   }
 
   return (
@@ -84,7 +92,7 @@ export default function ChecklistsPage() {
       <Erro>{erro}</Erro>
 
       {aberto && (
-        <form className="card" onSubmit={salvar}>
+        <form className={`card ${salvando ? 'enviando' : ''}`} onSubmit={salvar}>
           <label>Nome *</label>
           <input
             value={form.nome}
@@ -118,7 +126,9 @@ export default function ChecklistsPage() {
             </button>
           </div>
           <div style={{ marginTop: 12 }}>
-            <button type="submit">Salvar</button>
+            <button type="submit" disabled={salvando}>
+              {salvando ? 'Salvando...' : 'Salvar'}
+            </button>
           </div>
         </form>
       )}
@@ -157,12 +167,18 @@ export default function ChecklistsPage() {
       </table>
 
       {copiandoId && (
-        <form className="card" onSubmit={confirmarCopia} style={{ marginTop: 16 }}>
+        <form
+          className={`card ${copiando ? 'enviando' : ''}`}
+          onSubmit={confirmarCopia}
+          style={{ marginTop: 16 }}
+        >
           <h3 style={{ marginTop: 0 }}>Copiar checklist</h3>
           <label>Nome do novo checklist *</label>
           <input value={nomeCopia} onChange={(e) => setNomeCopia(e.target.value)} />
           <div style={{ marginTop: 12 }}>
-            <button type="submit">Confirmar copia</button>{' '}
+            <button type="submit" disabled={copiando}>
+              {copiando ? 'Copiando...' : 'Confirmar copia'}
+            </button>{' '}
             <button
               type="button"
               className="secundario"
